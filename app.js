@@ -31,7 +31,38 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // User data (for demonstration purposes)
-const users = [{ id: 1, username: 'user', password: 'password', first_name: 'User' }];
+const users = [
+  { id: 1, username: 'user', password: 'password', first_name: 'User1' },
+  { id: 2, username: 'user2', password: 'password', first_name: 'User2' }
+];
+const transactions = [{
+  id: 1,
+  from: 1,
+  to: 2,
+  amount: 100,
+  date: new Date(),
+  purpose: 'Payment for services',
+  status: 'completed'
+},
+{
+  id: 2,
+  from: 2,
+  to: 1,
+  amount: 120,
+  date: new Date(),
+  purpose: 'Payment for services',
+  status: 'completed'
+},
+]
+
+// Middleware to check if the user is authenticated
+function isAuthenticated(req, res, next) {
+  // console.log("entered isauthenticated>", req.isAuthenticated());
+    if (req.isAuthenticated()) {
+      return next(); // Proceed to the next middleware or route handler
+    }
+    res.status(401).json({ success: false, message: 'Unauthorized: Session is invalid or expired.' });
+  }
 
 // Passport Local Strategy
 passport.use(new LocalStrategy(
@@ -127,14 +158,23 @@ app.get('/login', (req, res) => {
   res.status(200).send("Login page");
 });
 
-app.get('/isValidSession', (req, res) => {
+app.get('/isValidSession', isAuthenticated, (req, res) => {
   console.log("user>>", req.user, req.isAuthenticated());
-  if (req.isAuthenticated()) {
-    res.status(200).send({user: req.user});
-  }
-  else {
-    res.status(401).send("Unauthorized");
-  }
+  res.status(200).send({user: req.user});
+});
+
+app.post('/logout', isAuthenticated, (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'Failed to log out the user.', error: err });
+    }
+    res.status(200).send("Logged out");
+  });
+});
+
+app.get('/getTransactions', isAuthenticated, (req, res) => {
+  console.log("userId>", req.user.id);
+  res.status(200).send({transactions: transactions.filter(t => t.from === req.user.id)});
 });
 
 app.listen(port, () => {
