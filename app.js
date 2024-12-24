@@ -2,6 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session');
+const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
@@ -17,15 +18,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-   secret: 'secret', 
-   resave: false, 
-   saveUninitialized: false,
-   cookie: {
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
     httpOnly: true,
-    secure: 'false', // Set to true in production
+    secure: false, // Set to true in production
     maxAge: 1000 * 60 * 60 * 24
-  } }));
-// app.use(passport.initialize());
+  }
+}));
+app.use(passport.initialize());
 app.use(passport.session());
 
 // User data (for demonstration purposes)
@@ -50,7 +52,7 @@ passport.use(new LocalStrategy(
 passport.serializeUser((user, done) => {
   // done(null, user.id);
   process.nextTick(function() {
-    return done(null, user);
+    return done(null, user.id);
   });
 });
 
@@ -67,21 +69,20 @@ passport.deserializeUser((id, done) => {
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:8080');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    next();
-});
+
+app.use(cors({
+  origin: 'http://localhost:8080',
+  credentials: true, // Allow credentials (cookies) to be sent
+}));
 
 
 // Handle POST requests to the '/upload' endpoint
-app.post('/upload', upload.single('documentFile'), async(req, res) => {
-    try{
+app.post('/upload', upload.single('documentFile'), async (req, res) => {
+  try {
     const buffer = req.file.buffer;
-    
+
     let code = await Payment.decodeQRCode(buffer);
-    if(!code){
+    if (!code) {
       res.send(null).status(401);
     }
     code = JSON.parse(code);
@@ -89,17 +90,12 @@ app.post('/upload', upload.single('documentFile'), async(req, res) => {
 
     res.send(code).status(201);
 
-    }catch(err){
-        console.log("error while handling file>>", err);
-        res.status(500).send("Internal Server Error");
-    }
+  } catch (err) {
+    console.log("error while handling file>>", err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
-// app.post('/login', async(req, res) =>{
-//   console.log("reached login api");
-//   console.log("req.body>>", req.body);
-//   res.status(201).send(true);
-// })
 
 const loginHandler = async (req, res, next) => {
   console.log("req body>>", req.body);
@@ -127,14 +123,17 @@ const loginHandler = async (req, res, next) => {
 
 app.post('/login', loginHandler);
 
-app.get('/login', (req,res) =>{
+app.get('/login', (req, res) => {
   res.status(200).send("Login page");
 });
 
-app.get('/isValidSession', (req,res)=>{  
-  console.log("user>>", req.user);
-  if(req.isAuthenticated()){
-    res.status(200).send({id: 1, firstName: 'User'});
+app.get('/isValidSession', (req, res) => {
+  console.log("user>>", req.user, req.isAuthenticated());
+  if (req.isAuthenticated()) {
+    res.status(200).send({user: req.user});
+  }
+  else {
+    res.status(401).send("Unauthorized");
   }
 });
 
