@@ -9,6 +9,7 @@ const multer = require('multer');
 const path = require('path');
 
 const Payment = require('./utils/payment');
+const { users, transactions } = require('./dummyData');
 
 
 const app = express();
@@ -33,41 +34,6 @@ app.use(passport.session());
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'build')));
-
-// User data (for demonstration purposes)
-const users = [
-  { id: 1, username: 'user', password: 'password', isParent: true, address: 'axB10' },
-  { id: 2, username: 'user2', password: 'password', isParent: false, address: 'axB21' },
-  { id: 3, username: 'user3', password: 'password', isParent: false, address: 'axB32' }
-];
-const transactions = [{
-  id: 1,
-  from: 1,
-  to: 'axB21',
-  amount: 100,
-  date: new Date().toLocaleDateString(),
-  purpose: 'Payment for services',
-  status: 'completed'
-},
-{
-  id: 2,
-  from: 2,
-  to: 'axB10',
-  amount: 120,
-  date: new Date().toLocaleDateString(),
-  purpose: 'Payment for services',
-  status: 'completed'
-},
-{
-  id: 3,
-  from: 3,
-  to: 'axB21',
-  amount: 10,
-  date: new Date().toLocaleDateString(),
-  purpose: 'testing',
-  status: 'pending approval'
-},
-]
 
 // Middleware to check if the user is authenticated
 function isAuthenticated(req, res, next) {
@@ -167,6 +133,22 @@ const loginHandler = async (req, res, next) => {
 
 app.post('/login', loginHandler);
 
+app.post('/register', (req, res, next) => {
+  console.log("req body>>", req.body);
+  const { username, password, walletAddress } = req.body;
+  const user = {
+    id: users.length + 1,
+    username,
+    password,
+    isParent: false,
+    address: walletAddress,
+    familyId: 0
+  }
+  users.push(user);
+  loginHandler(req, res, next);
+});
+
+
 app.get('/isValidSession', isAuthenticated, (req, res) => {
   res.status(200).send({user: req.user});
 });
@@ -199,16 +181,14 @@ app.post('/makePayment', isAuthenticated, (req, res) => {
 
 app.post('/addMember', isAuthenticated, (req, res) => {
   console.log("req body>>", req.body);
-  const { username, password, isParent, walletAddress } = req.body;
-  const newMember = {
-    id: users.length + 1,
-    username,
-    password,
-    isParent,
-    address: walletAddress
+  const { isParent, walletAddress } = req.body;
+  const user = users.find(u => u.address === walletAddress);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found.' });
   }
-  users.push(newMember);
-  res.status(201).send({newMember});
+  user.familyId = req.user.familyId;
+  user.isParent = isParent;
+  res.status(201).send({user});
 });
 
 app.post('/approveOrRejectTransaction', isAuthenticated, (req, res) => {
@@ -231,7 +211,20 @@ app.post('/approveOrRejectTransaction', isAuthenticated, (req, res) => {
 app.get('/getTransactions', isAuthenticated, (req, res) => {
   if(req.query.status) {
     console.log("status>>", req.query.status);
-    res.status(200).send({transactions: transactions.filter(t => t.status.toLowerCase().includes(req.query.status))});
+    //need to get all pending transactions where the given user is the parent -> check for status as pending approval and the user with from address should have the same familiyId as the user/parent
+    if(req.user.isParent === false){
+      res.status(401).send("Unauthorized");
+    }
+    const pendingTransactions = transactions.filter(t => t.status.toLowerCase().includes(req.query.status));
+    
+    const filteredTransactions = pendingTransactions.filter(item =>{
+      const fromUser = users.find(u => u.id === item.from);
+      if(fromUser.familyId === req.user.familyId){ //They are part of the same family
+        return item;
+      }
+    })
+
+    res.status(200).send({transactions: filteredTransactions});
   }else{
     res.status(200).send({transactions: transactions.filter(t => t.from === req.user.id)});
   }
