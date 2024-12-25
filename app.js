@@ -33,7 +33,8 @@ app.use(passport.session());
 // User data (for demonstration purposes)
 const users = [
   { id: 1, username: 'user', password: 'password', isParent: true, address: 'axB10' },
-  { id: 2, username: 'user2', password: 'password', isParent: false, address: 'axB21' }
+  { id: 2, username: 'user2', password: 'password', isParent: false, address: 'axB21' },
+  { id: 3, username: 'user3', password: 'password', isParent: false, address: 'axB32' }
 ];
 const transactions = [{
   id: 1,
@@ -52,6 +53,15 @@ const transactions = [{
   date: new Date().toLocaleDateString(),
   purpose: 'Payment for services',
   status: 'completed'
+},
+{
+  id: 3,
+  from: 3,
+  to: 'axB21',
+  amount: 10,
+  date: new Date().toLocaleDateString(),
+  purpose: 'testing',
+  status: 'pending approval'
 },
 ]
 
@@ -197,8 +207,30 @@ app.post('/addMember', isAuthenticated, (req, res) => {
   res.status(201).send({newMember});
 });
 
+app.post('/approveOrRejectTransaction', isAuthenticated, (req, res) => {
+  console.log("req body>>", req.body);
+  const { transactionId, isApproved } = req.body;
+
+  if(req.user.isParent === false){
+    res.status(401).send("Unauthorized");
+  }
+
+  const transaction = transactions.find(t => t.id === transactionId);
+  if(isApproved){
+    transaction.status = 'completed';
+  }else{
+    transaction.status = 'rejected';
+  }
+  res.status(201).send({transaction});
+});
+
 app.get('/getTransactions', isAuthenticated, (req, res) => {
-  res.status(200).send({transactions: transactions.filter(t => t.from === req.user.id)});
+  if(req.query.status) {
+    console.log("status>>", req.query.status);
+    res.status(200).send({transactions: transactions.filter(t => t.status.toLowerCase().includes(req.query.status))});
+  }else{
+    res.status(200).send({transactions: transactions.filter(t => t.from === req.user.id)});
+  }
 });
 
 app.get("*", isAuthenticated, (req, res) => {
