@@ -158,16 +158,22 @@ app.post('/logout', isAuthenticated, (req, res) => {
     if (err) {
       return res.status(500).json({ success: false, message: 'Failed to log out the user.', error: err });
     }
-    res.status(200).send("Logged out");
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: 'Failed to destroy the session.', error: err });
+      }
+      res.clearCookie('connect.sid', { path: '/' });
+      res.status(200).send("Logged out");
+    });
   });
 });
 
 app.post('/makePayment', isAuthenticated, (req, res) => {
   console.log("req body>>", req.body);
-  const { to, amount, purpose } = req.body;
-  const from = req.user.id;
+  const { from, to, amount, purpose } = req.body;
   const transaction = {
     id: transactions.length + 1,
+    payor: req.user.id,
     from,
     to,
     amount,
@@ -226,7 +232,7 @@ app.get('/getTransactions', isAuthenticated, (req, res) => {
 
     res.status(200).send({transactions: filteredTransactions});
   }else{
-    res.status(200).send({transactions: transactions.filter(t => t.from === req.user.id)});
+    res.status(200).send({transactions: transactions.filter(t => t.payor === req.user.id)});
   }
 });
 
