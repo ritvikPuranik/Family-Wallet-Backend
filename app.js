@@ -6,6 +6,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
+const path = require('path');
 
 const Payment = require('./utils/payment');
 
@@ -29,6 +30,9 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'build')));
 
 // User data (for demonstration purposes)
 const users = [
