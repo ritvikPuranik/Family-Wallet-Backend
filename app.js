@@ -32,24 +32,24 @@ app.use(passport.session());
 
 // User data (for demonstration purposes)
 const users = [
-  { id: 1, username: 'user', password: 'password', first_name: 'User1' },
-  { id: 2, username: 'user2', password: 'password', first_name: 'User2' }
+  { id: 1, username: 'user', password: 'password', isParent: true, address: 'axB10' },
+  { id: 2, username: 'user2', password: 'password', isParent: false, address: 'axB21' }
 ];
 const transactions = [{
   id: 1,
   from: 1,
-  to: 2,
+  to: 'axB21',
   amount: 100,
-  date: new Date(),
+  date: new Date().toLocaleDateString(),
   purpose: 'Payment for services',
   status: 'completed'
 },
 {
   id: 2,
   from: 2,
-  to: 1,
+  to: 'axB10',
   amount: 120,
-  date: new Date(),
+  date: new Date().toLocaleDateString(),
   purpose: 'Payment for services',
   status: 'completed'
 },
@@ -75,7 +75,6 @@ passport.use(new LocalStrategy(
     if (user.password !== password) {
       return done(null, false, { message: 'Incorrect password.' });
     }
-    console.log("Authenticated user>>", user);
     return done(null, user);
   }
 ));
@@ -83,12 +82,12 @@ passport.use(new LocalStrategy(
 passport.serializeUser((user, done) => {
   // done(null, user.id);
   process.nextTick(function() {
-    return done(null, user.id);
+    return done(null, user);
   });
 });
 
-passport.deserializeUser((id, done) => {
-  const user = users.find(u => u.id === id);
+passport.deserializeUser((curUser, done) => {
+  const user = users.find(u => u.id === curUser.id);
   process.nextTick(function() {
     return done(null, user);
   });
@@ -147,19 +146,14 @@ const loginHandler = async (req, res, next) => {
       }
 
       // Successful login response
-      return res.status(201).json({ success: true, message: 'Login successful!', user: { id: user.id, firstName: user.first_name } });
+      return res.status(201).json({ success: true, message: 'Login successful!', user });
     });
   })(req, res, next); // Pass req, res, next to the authenticate function
 }
 
 app.post('/login', loginHandler);
 
-app.get('/login', (req, res) => {
-  res.status(200).send("Login page");
-});
-
 app.get('/isValidSession', isAuthenticated, (req, res) => {
-  console.log("user>>", req.user, req.isAuthenticated());
   res.status(200).send({user: req.user});
 });
 
@@ -172,9 +166,45 @@ app.post('/logout', isAuthenticated, (req, res) => {
   });
 });
 
+app.post('/makePayment', isAuthenticated, (req, res) => {
+  console.log("req body>>", req.body);
+  const { to, amount, purpose } = req.body;
+  const from = req.user.id;
+  const transaction = {
+    id: transactions.length + 1,
+    from,
+    to,
+    amount,
+    date: new Date().toLocaleDateString(),
+    purpose,
+    status: 'pending approval'
+  }
+  transactions.push(transaction);
+  res.status(201).send({transaction});
+});
+
+app.post('/addMember', isAuthenticated, (req, res) => {
+  console.log("req body>>", req.body);
+  const { username, password, isParent, walletAddress } = req.body;
+  const newMember = {
+    id: users.length + 1,
+    username,
+    password,
+    isParent,
+    address: walletAddress
+  }
+  users.push(newMember);
+  res.status(201).send({newMember});
+});
+
 app.get('/getTransactions', isAuthenticated, (req, res) => {
-  console.log("userId>", req.user.id);
   res.status(200).send({transactions: transactions.filter(t => t.from === req.user.id)});
+});
+
+app.get("*", isAuthenticated, (req, res) => {
+  console.log("entered get *");
+  console.log(path.join(__dirname, "build", "index.html"));
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 app.listen(port, () => {
