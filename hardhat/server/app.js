@@ -41,50 +41,66 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 // Middleware to check if the user is authenticated
 function isAuthenticated(req, res, next) {
-  // console.log("entered isauthenticated>", req.isAuthenticated());
-    if (req.isAuthenticated()) {
-      return next(); // Proceed to the next middleware or route handler
-    }
-    res.status(401).json({ success: false, message: 'Unauthorized: Session is invalid or expired.' });
+  console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
+
+  if (req.isAuthenticated()) {
+    return next(); // Proceed to the next middleware or route handler
   }
+  res.status(401).json({ success: false, message: 'Unauthorized: Session is invalid or expired.' });
+}
 
 // Passport Local Strategy
 passport.use(new LocalStrategy(
-  { usernameField: 'username', passwordField: 'password', passReqToCallback: true },
-  async(req, username, password, done) => {
-    const {account} = req.body;
+  // { usernameField: 'account', passwordField: 'password', passReqToCallback: true },
+  { usernameField: 'account', passwordField: 'password' },
+  async (username, password, done) => {
+    // const { account } = req.body;
     console.log("username>>", username);
-    const userFound = await USERS_CONTRACT.getUser(account);
-    console.log("users now>>", userFound);
-    const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
-    
-    // const user = users.find(u => u.username === username);
-    if (username !== usernameSC) {
-      return done(null, false, { message: 'Incorrect username.' });
+    try{
+      const userFound = await USERS_CONTRACT.getUser(username);
+      console.log("users now>>", userFound);
+      const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
+  
+      // const user = users.find(u => u.username === username);
+      if (username !== usernameSC.toLowerCase()) {
+        return done(null, false, { message: 'Incorrect username.' });
+      }
+      if (password !== passwordSC) {
+        return done(null, false, { message: 'Incorrect password.' });
+      }
+      const user = {
+        id,
+        username: usernameSC,
+        isParent: isParentSC,
+        familyId: Number(familyIdSC)
+      };
+      return done(null, user);
+
+    }catch(err){
+      console.log("error while getting user>>", err);
+      return done(null, false, { message: 'Incorrect username or password.' });
     }
-    if (password !== passwordSC) {
-      return done(null, false, { message: 'Incorrect password.' });
-    }
-    const user = {
-      id,
-      username: usernameSC,
-      isParent: isParentSC,
-      familyId: Number(familyIdSC)
-    };
-    return done(null, user);
   }
 ));
 
 passport.serializeUser((user, done) => {
   // done(null, user.id);
-  process.nextTick(function() {
+  process.nextTick(function () {
     return done(null, user);
   });
 });
 
-passport.deserializeUser((curUser, done) => {
-  const user = users.find(u => u.id === curUser.id);
-  process.nextTick(function() {
+passport.deserializeUser(async (curUser, done) => {
+  const userFound = await USERS_CONTRACT.getUser(curUser.id);
+  const [id, username, isParent, familyId] = userFound;
+  const user = {
+    id,
+    username,
+    isParent,
+    familyId: Number(familyId)
+  };
+  console.log("curUser at deserialize>", curUser);
+  process.nextTick(function () {
     return done(null, user);
   });
   // done(null, user);
@@ -122,7 +138,6 @@ app.post('/upload', upload.single('documentFile'), async (req, res) => {
   }
 });
 
-
 const loginHandler = async (req, res, next) => {
   console.log("req body at handler>>", req.body);
   // Use passport.authenticate with a callback to handle the responses
@@ -132,7 +147,7 @@ const loginHandler = async (req, res, next) => {
     }
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid username or password.' });
+      return res.status(401).json({ success: false, message: info.message });
     }
 
     // If authentication succeeds, log the user in
@@ -149,11 +164,11 @@ const loginHandler = async (req, res, next) => {
 
 app.post('/login', loginHandler);
 
-app.post('/register', async(req, res, next) => {
+app.post('/register', async (req, res, next) => {
   console.log("req body>>", req.body);
-  const { account, username, password } = req.body;
-  let response = await USERS_CONTRACT.registerUser(account, username, password)
-  
+  const { account, password } = req.body;
+  await USERS_CONTRACT.registerUser(account, password)
+
   //delay for 5 sec
   await new Promise(resolve => setTimeout(resolve, 5000));
 
@@ -162,7 +177,8 @@ app.post('/register', async(req, res, next) => {
 
 
 app.get('/isValidSession', isAuthenticated, (req, res) => {
-  res.status(200).send({user: req.user});
+  console.log("entered isvalidsession>>", req.user);
+  res.status(200).send({ user: req.user });
 });
 
 app.post('/logout', isAuthenticated, (req, res) => {
@@ -194,7 +210,7 @@ app.post('/makePayment', isAuthenticated, (req, res) => {
     status: 'pending approval'
   }
   transactions.push(transaction);
-  res.status(201).send({transaction});
+  res.status(201).send({ transaction });
 });
 
 app.post('/addMember', isAuthenticated, (req, res) => {
@@ -207,45 +223,45 @@ app.post('/addMember', isAuthenticated, (req, res) => {
   user.familyId = req.user.familyId;
   user.isParent = isParent;
   console.log("users now>>", users);
-  res.status(201).send({user});
+  res.status(201).send({ user });
 });
 
 app.post('/approveOrRejectTransaction', isAuthenticated, (req, res) => {
   console.log("req body>>", req.body);
   const { transactionId, isApproved } = req.body;
 
-  if(req.user.isParent === false){
+  if (req.user.isParent === false) {
     res.status(401).send("Unauthorized");
   }
 
   const transaction = transactions.find(t => t.id === transactionId);
-  if(isApproved){
+  if (isApproved) {
     transaction.status = 'completed';
-  }else{
+  } else {
     transaction.status = 'rejected';
   }
-  res.status(201).send({transaction});
+  res.status(201).send({ transaction });
 });
 
 app.get('/getTransactions', isAuthenticated, (req, res) => {
-  if(req.query.status) {
+  if (req.query.status) {
     console.log("status>>", req.query.status);
     //need to get all pending transactions where the given user is the parent -> check for status as pending approval and the user with from address should have the same familiyId as the user/parent
-    if(req.user.isParent === false){
+    if (req.user.isParent === false) {
       res.status(401).send("Unauthorized");
     }
     const pendingTransactions = transactions.filter(t => t.status.toLowerCase().includes(req.query.status));
-    
-    const filteredTransactions = pendingTransactions.filter(item =>{
+
+    const filteredTransactions = pendingTransactions.filter(item => {
       const fromUser = users.find(u => u.id === item.from);
-      if(fromUser.familyId === req.user.familyId){ //They are part of the same family
+      if (fromUser.familyId === req.user.familyId) { //They are part of the same family
         return item;
       }
     })
 
-    res.status(200).send({transactions: filteredTransactions});
-  }else{
-    res.status(200).send({transactions: transactions.filter(t => t.payor === req.user.id)});
+    res.status(200).send({ transactions: filteredTransactions });
+  } else {
+    res.status(200).send({ transactions: transactions.filter(t => t.payor === req.user.id) });
   }
 });
 

@@ -1,3 +1,84 @@
+await usersContract.getUser("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+await usersContract.getUser("0xBcd4042DE499D14e55001CcbB24a551F3b954096");
+await usersContract.getAddress()
+usersContract.getAddress()
+usersContract = await ethers.getContractAt(abi, "0xfbfbfDdd6e35dA57b7B0F9a2C10E34Be70B3A4E9",signer);
+usersContract = await new ethers.getContractAt(abi, "0xfbfbfDdd6e35dA57b7B0F9a2C10E34Be70B3A4E9",signer);
+signer
+let signer = accounts[10];
+let accounts = await ethers.getSigners();
+let usersContract
+abi
+]
+  }
+    "type": "function"
+    "stateMutability": "nonpayable",
+    "outputs": [],
+    "name": "registerUser",
+    ],
+      }
+        "type": "string"
+        "name": "_password",
+        "internalType": "string",
+      {
+      },
+        "type": "string"
+        "name": "_username",
+        "internalType": "string",
+      {
+      },
+        "type": "address"
+        "name": "_account",
+        "internalType": "address",
+      {
+    "inputs": [
+  {
+  },
+    "type": "function"
+    "stateMutability": "view",
+    ],
+      }
+        "type": "uint8"
+        "name": "familyId",
+        "internalType": "uint8",
+      {
+      },
+        "type": "bool"
+        "name": "isParent",
+        "internalType": "bool",
+      {
+      },
+        "type": "string"
+        "name": "password",
+        "internalType": "string",
+      {
+      },
+        "type": "string"
+        "name": "username",
+        "internalType": "string",
+      {
+      },
+        "type": "address"
+        "name": "id",
+        "internalType": "address",
+      {
+    "outputs": [
+    "name": "getUser",
+    ],
+      }
+        "type": "address"
+        "name": "_userAddress",
+        "internalType": "address",
+      {
+    "inputs": [
+  {
+  },
+    "type": "constructor"
+    "stateMutability": "nonpayable",
+    "inputs": [],
+  {
+let abi = [
+abi
 accounts[10]
 let accounts = await ethers.getSigners();
 await ethers.getSigners();

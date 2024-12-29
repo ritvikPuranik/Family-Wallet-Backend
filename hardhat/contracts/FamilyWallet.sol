@@ -13,6 +13,7 @@ contract FamilyWallet{
     constructor(address _usersContractAddress){
         usersContract = IUsers(_usersContractAddress);
         owner = msg.sender;
+        usersContract.registerUser(owner, "user", "password");
     }
     
     function fetchUserDetails(address _userAddress) public view returns (address id, string memory username, string memory password, bool isParent, uint8 familyId) {
