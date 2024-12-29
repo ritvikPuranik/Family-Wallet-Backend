@@ -1,0 +1,27 @@
+accounts[10]
+let accounts = await ethers.getSigners();
+await ethers.getSigners();
+ethers.getSigners();
+await familyWallet.getAddress()
+familyWallet.getAddress()
+familyWallet.address
+await familyWallet.fetchUserDetails("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+await familyWallet.fetchUserDetails("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+await familyWallet.registerNewUser("0x70997970C51812dc3A010C7d01b50e0d17dc79C8","acc3","pass");
+await familyWallet.fetchUserDetails("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+await familyWallet.fetchUserDetails("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92263");
+await familyWallet.fetchUserDetails("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+familyWallet = await FamilyWallet.deploy("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+await familyWallet.fetchUserDetails("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+await users.getUser("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+familyWallet
+let familyWallet = await FamilyWallet.deploy("0x5fc8d32690cc91d4c39d9d3abcbd16989f875707");
+let FamilyWallet = await ethers.getContractFactory("FamilyWallet");
+await users.getUser("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+users.address
+await users.getUser("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+await users.registerUser("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "acc2", "pass");
+await users.getUser("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+users
+let users = await Users.deploy();
+let Users = await ethers.getContractFactory("Users");

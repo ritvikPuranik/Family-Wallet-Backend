@@ -1,0 +1,78 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/ritvik/Projects/Blockchain/Family-Wallet-Backend/hardhat/contracts/FamilyWallet.sol": {
+      "lastModificationDate": 1735430745172,
+      "contentHash": "0a24c8f40c1c65faeaf0fc5180765af9",
+      "sourceName": "contracts/FamilyWallet.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8"
+      ],
+      "artifacts": [
+        "FamilyWallet",
+        "IUsers"
+      ]
+    },
+    "/Users/ritvik/Projects/Blockchain/Family-Wallet-Backend/hardhat/contracts/Users.sol": {
+      "lastModificationDate": 1735348752497,
+      "contentHash": "63efe44f432cd26c6001760024466641",
+      "sourceName": "contracts/Users.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8"
+      ],
+      "artifacts": [
+        "Users"
+      ]
+    }
+  }
+}
