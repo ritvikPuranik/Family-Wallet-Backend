@@ -7,7 +7,8 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const path = require('path');
-const { ethers } = require("ethers");
+const hre = require("hardhat");
+const {ethers} = hre;
 
 
 const Payment = require('./utils/payment');
@@ -41,7 +42,7 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 // Middleware to check if the user is authenticated
 function isAuthenticated(req, res, next) {
-  console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
+  // console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
 
   if (req.isAuthenticated()) {
     return next(); // Proceed to the next middleware or route handler
@@ -58,7 +59,6 @@ passport.use(new LocalStrategy(
     console.log("username>>", username);
     try{
       const userFound = await USERS_CONTRACT.getUser(username);
-      console.log("users now>>", userFound);
       const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
   
       // const user = users.find(u => u.username === username);
@@ -99,7 +99,7 @@ passport.deserializeUser(async (curUser, done) => {
     isParent,
     familyId: Number(familyId)
   };
-  console.log("curUser at deserialize>", curUser);
+  // console.log("curUser at deserialize>", curUser);
   process.nextTick(function () {
     return done(null, user);
   });
@@ -167,7 +167,7 @@ app.post('/login', loginHandler);
 app.post('/register', async (req, res, next) => {
   console.log("req body>>", req.body);
   const { account, password } = req.body;
-  await USERS_CONTRACT.registerUser(account, password)
+  await USERS_CONTRACT.registerUser(account, password);
 
   //delay for 5 sec
   await new Promise(resolve => setTimeout(resolve, 5000));
@@ -177,7 +177,6 @@ app.post('/register', async (req, res, next) => {
 
 
 app.get('/isValidSession', isAuthenticated, (req, res) => {
-  console.log("entered isvalidsession>>", req.user);
   res.status(200).send({ user: req.user });
 });
 
@@ -213,17 +212,26 @@ app.post('/makePayment', isAuthenticated, (req, res) => {
   res.status(201).send({ transaction });
 });
 
-app.post('/addMember', isAuthenticated, (req, res) => {
+app.post('/addMember', isAuthenticated, async(req, res) => {
   console.log("req body>>", req.body);
   const { isParent, userId } = req.body;
-  const user = users.find(u => u.id === userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'User not found.' });
-  }
-  user.familyId = req.user.familyId;
-  user.isParent = isParent;
-  console.log("users now>>", users);
-  res.status(201).send({ user });
+  // const userFound = await USERS_CONTRACT.getUser(userId);
+  // console.log("user found in addMember>>", userFound);
+  // const [id, usernameSC, passwordSC, isParentSc, familyIdSC] = userFound;
+  
+  // const user = users.find(u => u.id === userId);
+
+  // if (!userFound && userFound[1]) { //Handled in SC
+  //   return res.status(404).json({ success: false, message: 'User not found.' });
+  // }
+  // user.familyId = req.user.familyId;
+  // user.isParent = isParent;
+  // console.log("users now>>", users);
+  let parentSigner = await ethers.getSigner(req.user.id);
+  let impersonatedContract = USERS_CONTRACT.connect(parentSigner);
+  await impersonatedContract.addMember(userId, isParent);
+  console.log("added member>>", userId);
+  res.status(201).send({ success: true });
 });
 
 app.post('/approveOrRejectTransaction', isAuthenticated, (req, res) => {

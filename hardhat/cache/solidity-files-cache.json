@@ -39,8 +39,8 @@
       ]
     },
     "/Users/ritvik/Projects/Blockchain/Family-Wallet-Backend/hardhat/contracts/Users.sol": {
-      "lastModificationDate": 1735474315271,
-      "contentHash": "28a1cd23c8492ec39df9e2b02aa5f882",
+      "lastModificationDate": 1735475606440,
+      "contentHash": "4fbd61523efc471f7aa1927bd4149376",
       "sourceName": "contracts/Users.sol",
       "solcConfig": {
         "version": "0.8.28",

@@ -41,4 +41,12 @@ contract Users{
         // return user;
     }
 
+    function addMember(address _account, bool _isParent) public {
+        require(users[msg.sender].isParent, "Only parent can add members");
+        require(users[_account].id != address(0), "Family Member not registered! They must create an account to be added as a member.");
+
+        users[_account].familyId = users[msg.sender].familyId;
+        users[_account].isParent = _isParent;
+    }
+
 }
