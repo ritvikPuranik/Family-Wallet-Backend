@@ -15,7 +15,7 @@ const Payment = require('./utils/payment');
 const { users, transactions } = require('./dummyData');
 const deployContract = require('./deploy'); // Import the deployment script
 
-let USERS_CONTRACT;
+let USERS_CONTRACT, PROVIDER;
 
 const app = express();
 const port = 3000;
@@ -41,8 +41,16 @@ app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'build')));
 
 // Middleware to check if the user is authenticated
-function isAuthenticated(req, res, next) {
-  // console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
+async function isAuthenticated(req, res, next) {
+  console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
+  const userFound = await USERS_CONTRACT.getUser(req.user.id);
+  const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
+  req.user = {
+    id,
+    username: usernameSC,
+    isParent: isParentSC,
+    familyId: Number(familyIdSC)
+  };
 
   if (req.isAuthenticated()) {
     return next(); // Proceed to the next middleware or route handler
@@ -176,7 +184,8 @@ app.post('/register', async (req, res, next) => {
 });
 
 
-app.get('/isValidSession', isAuthenticated, (req, res) => {
+app.get('/isValidSession', isAuthenticated, async(req, res) => {
+  
   res.status(200).send({ user: req.user });
 });
 
@@ -227,10 +236,21 @@ app.post('/addMember', isAuthenticated, async(req, res) => {
   // user.familyId = req.user.familyId;
   // user.isParent = isParent;
   // console.log("users now>>", users);
-  let parentSigner = await ethers.getSigner(req.user.id);
+
+
+  // let provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+  
+  await PROVIDER.send('hardhat_impersonateAccount', [req.user.id]);
+  let parentSigner = await PROVIDER.getSigner(req.user.id);
+  console.log("parentSigner>>", parentSigner);
   let impersonatedContract = USERS_CONTRACT.connect(parentSigner);
-  await impersonatedContract.addMember(userId, isParent);
-  console.log("added member>>", userId);
+  console.log("impoersonatedContract>>", await impersonatedContract.getAddress(), userId, isParent);
+  let response = await impersonatedContract.addMember(userId, isParent);
+  console.log("added member>>", response);
+  await PROVIDER.send('hardhat_stopImpersonatingAccount', [req.user.id]);
+  req.user.familyId = userId;
+  req.user.isParent = isParent;
+
   res.status(201).send({ success: true });
 });
 
@@ -281,7 +301,7 @@ app.get("*", isAuthenticated, (req, res) => {
 
 // Deploy the Users contract on server start
 deployContract().then((contract) => {
-  USERS_CONTRACT = contract;
+  [USERS_CONTRACT, PROVIDER] = contract;
 }).catch((error) => {
   console.error('Failed to deploy contract:', error);
 });

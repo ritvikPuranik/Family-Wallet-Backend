@@ -1,3 +1,26 @@
+Number(result[4]);
+result[4];
+let result = await contractInstance.getUser("0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+await contractInstance.getUser("0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+contractInstance.getUser("0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+await provider.getSigner("0xbcd4042de499d14e55001ccbb24a551f3b954096");
+provider.getSigner("0xbcd4042de499d14e55001ccbb24a551f3b954096");
+provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+    let provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+provider
+await contractInstance.addMember("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", true);
+await impersonatedContract.addMember("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", true);
+await impersonatedContract.getUser("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+impersonatedContract.getUser("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+impersonatedContract = await contractInstance.connect(parentSigner);
+parentSigner = await ethers.getSigner("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+let impersonatedContract = await contractInstance.connect(parentSigner);
+let parentSigner = await ethers.getSigner("0xBcd4042DE499D14e55001CcbB24a551F3b954096");
+await contractInstance.getUser("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+await contractInstance.getUser("0xBcd4042DE499D14e55001CcbB24a551F3b954096");
+contractInstance
+let contractInstance = await ethers.getContractAt(abi, "0x2238CD68984C23D8D9020E41cb6a0Cef3cAD3703", contractOwner);
+await ethers.provider.getCode("0x2238CD68984C23D8D9020E41cb6a0Cef3cAD3703");
 await ethers.provider.getCode("0x06E54Aa21496Ed0099219ea79a2c72247F36091A");
 await ethers.provider.getCode("0xCF9C83be89ac927F9D98F0CaFB9ED7fDea2fD459");
 ethers.provider.getCode("0xCF9C83be89ac927F9D98F0CaFB9ED7fDea2fD459");

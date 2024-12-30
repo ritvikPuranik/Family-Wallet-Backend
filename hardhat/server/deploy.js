@@ -41,7 +41,7 @@ async function deployContract() {
         contractInstance = await ethers.getContractAt(abi, existingContractAddress, contractOwner);
     }
 
-    return contractInstance;
+    return [contractInstance, provider];
 }
 
 module.exports = deployContract;
