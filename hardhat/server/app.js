@@ -8,7 +8,7 @@ const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const path = require('path');
 const hre = require("hardhat");
-const {ethers} = hre;
+const { ethers } = hre;
 
 
 const Payment = require('./utils/payment');
@@ -43,16 +43,16 @@ app.use(express.static(path.join(__dirname, 'build')));
 // Middleware to check if the user is authenticated
 async function isAuthenticated(req, res, next) {
   // console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
-  const userFound = await SMART_CONTRACT.getUser(req.user.id);
-  const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
-  req.user = {
-    id,
-    username: usernameSC,
-    isParent: isParentSC,
-    familyId: Number(familyIdSC)
-  };
-
   if (req.isAuthenticated()) {
+    const userFound = await SMART_CONTRACT.getUser(req.user.id);
+    const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
+    req.user = {
+      id,
+      username: usernameSC,
+      isParent: isParentSC,
+      familyId: Number(familyIdSC)
+    };
+
     return next(); // Proceed to the next middleware or route handler
   }
   res.status(401).json({ success: false, message: 'Unauthorized: Session is invalid or expired.' });
@@ -65,10 +65,10 @@ passport.use(new LocalStrategy(
   async (username, password, done) => {
     // const { account } = req.body;
     console.log("username>>", username);
-    try{
+    try {
       const userFound = await SMART_CONTRACT.getUser(username);
       const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
-  
+
       // const user = users.find(u => u.username === username);
       if (username !== usernameSC.toLowerCase()) {
         return done(null, false, { message: 'Incorrect username.' });
@@ -84,7 +84,7 @@ passport.use(new LocalStrategy(
       };
       return done(null, user);
 
-    }catch(err){
+    } catch (err) {
       console.log("error while getting user>>", err);
       return done(null, false, { message: 'Incorrect username or password.' });
     }
@@ -125,6 +125,14 @@ app.use(cors({
   credentials: true, // Allow credentials (cookies) to be sent
 }));
 
+const impersonate = async (address) => {
+  await PROVIDER.send('hardhat_impersonateAccount', [address]);
+  let parentSigner = await PROVIDER.getSigner(address);
+  console.log("parentSigner>>", parentSigner);
+  let impersonatedContract = SMART_CONTRACT.connect(parentSigner);
+  console.log("impoersonatedContract>>", await impersonatedContract.getAddress());
+  return impersonatedContract;
+}
 
 // Handle POST requests to the '/upload' endpoint
 app.post('/upload', upload.single('documentFile'), async (req, res) => {
@@ -181,7 +189,7 @@ app.post('/register', async (req, res, next) => {
 });
 
 
-app.get('/isValidSession', isAuthenticated, async(req, res) => {
+app.get('/isValidSession', isAuthenticated, async (req, res) => {
   res.status(200).send({ user: req.user });
 });
 
@@ -200,34 +208,23 @@ app.post('/logout', isAuthenticated, (req, res) => {
   });
 });
 
-app.post('/makePayment', isAuthenticated, (req, res) => {
+app.post('/makePayment', isAuthenticated, async (req, res) => {
   console.log("req body>>", req.body);
-  const { from, to, amount, purpose } = req.body;
-  const transaction = {
-    id: transactions.length + 1,
-    payor: req.user.id,
-    from,
-    to,
-    amount,
-    date: new Date().toLocaleDateString(),
-    purpose,
-    status: 'pending approval'
-  }
-  transactions.push(transaction);
-  res.status(201).send({ transaction });
+  const { to, amount, purpose } = req.body;
+
+  const impersonatedContract = await impersonate(req.user.id);
+  await impersonatedContract.makePayment(to, amount, purpose);
+  await PROVIDER.send('hardhat_stopImpersonatingAccount', [req.user.id]);
+
+  res.status(201).send({ status: true });
 });
 
-app.post('/addMember', isAuthenticated, async(req, res) => {
+app.post('/addMember', isAuthenticated, async (req, res) => {
   console.log("req body>>", req.body);
   const { isParent, userId } = req.body;
-  
-  await PROVIDER.send('hardhat_impersonateAccount', [req.user.id]);
-  let parentSigner = await PROVIDER.getSigner(req.user.id);
-  console.log("parentSigner>>", parentSigner);
-  let impersonatedContract = SMART_CONTRACT.connect(parentSigner);
-  console.log("impoersonatedContract>>", await impersonatedContract.getAddress(), userId, isParent);
-  let response = await impersonatedContract.addMember(userId, isParent);
-  console.log("added member>>", response);
+
+  const impersonatedContract = await impersonate(req.user.id);
+  await impersonatedContract.addMember(userId, isParent);
   await PROVIDER.send('hardhat_stopImpersonatingAccount', [req.user.id]);
   req.user.familyId = userId;
   req.user.isParent = isParent;
@@ -235,42 +232,71 @@ app.post('/addMember', isAuthenticated, async(req, res) => {
   res.status(201).send({ success: true });
 });
 
-app.post('/approveOrRejectTransaction', isAuthenticated, (req, res) => {
+app.post('/approveOrRejectTransaction', isAuthenticated, async(req, res) => {
   console.log("req body>>", req.body);
   const { transactionId, isApproved } = req.body;
-
+  
   if (req.user.isParent === false) {
     res.status(401).send("Unauthorized");
   }
+  const isSuccessful = await SMART_CONTRACT.approveOrRejectTxn(transactionId, isApproved);
 
-  const transaction = transactions.find(t => t.id === transactionId);
-  if (isApproved) {
-    transaction.status = 'completed';
-  } else {
-    transaction.status = 'rejected';
-  }
-  res.status(201).send({ transaction });
+  isSuccessful ? res.status(201).send({ transactionId }) : res.status(500).send("Internal Server Error");
 });
 
-app.get('/getTransactions', isAuthenticated, (req, res) => {
-  if (req.query.status) {
+app.get('/getTransactions', isAuthenticated, async (req, res) => {
+  const transactions = await SMART_CONTRACT.getTransactions();
+  if (req.query.status) {//need to get all pending transactions where the given user is the parent -> check for status as pending approval and the user with from address should have the same familiyId as the user/parent
     console.log("status>>", req.query.status);
-    //need to get all pending transactions where the given user is the parent -> check for status as pending approval and the user with from address should have the same familiyId as the user/parent
     if (req.user.isParent === false) {
       res.status(401).send("Unauthorized");
     }
-    const pendingTransactions = transactions.filter(t => t.status.toLowerCase().includes(req.query.status));
 
-    const filteredTransactions = pendingTransactions.filter(item => {
-      const fromUser = users.find(u => u.id === item.from);
-      if (fromUser.familyId === req.user.familyId) { //They are part of the same family
-        return item;
+    const pendingTransactions = [];
+    transactions.map(t => {
+      let [id, from, to, amount, timestamp, purpose, status] = t;
+      if (status.toLowerCase().includes(req.query.status)) {
+        pendingTransactions.push({
+          id: Number(id),
+          from,
+          to,
+          amount: Number(amount),
+          date: new Date(Number(timestamp)).toLocaleDateString(),
+          purpose,
+          status
+        });
       }
-    })
+    });
+
+    const filteredTransactions = [];
+    await Promise.all(pendingTransactions.map(async (item) => {
+      if (item) {
+        const [, , , , familyId] = await SMART_CONTRACT.getUser(item.from);
+        if (Number(familyId) == Number(req.user.familyId)) { //They are part of the same family
+          filteredTransactions.push(item);
+        }
+      }
+    }));
 
     res.status(200).send({ transactions: filteredTransactions });
   } else {
-    res.status(200).send({ transactions: transactions.filter(t => t.payor === req.user.id) });
+    let filteredTransactions = [];
+    transactions.map(t => {
+      let [id, from, to, amount, timestamp, purpose, status] = t;
+      if (from === req.user.id) {
+        filteredTransactions.push({
+          id: Number(id),
+          from,
+          to,
+          amount: Number(amount),
+          date: new Date(Number(timestamp)).toLocaleDateString(),
+          purpose,
+          status
+        });
+      }
+    })
+    // console.log("filteredTxns>>", filteredTransactions);
+    res.status(200).send({ transactions: filteredTransactions });
   }
 });
 
