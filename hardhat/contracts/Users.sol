@@ -12,10 +12,10 @@ contract Users{
 
     mapping(address => User) private users; //Use this in serialze to find the user
 
-    constructor(){
-        users[msg.sender] = User({
-            id: msg.sender,
-            username: msg.sender,
+    constructor(address _owner){
+        users[_owner] = User({
+            id: _owner,
+            username: _owner,
             password: "password",
             isParent: true,
             familyId: 1
@@ -34,7 +34,7 @@ contract Users{
         });
     }
 
-    function getUser(address _userAddress) external view returns (address id, address username, string memory password, bool isParent, uint8 familyId) { 
+    function getUser(address _userAddress) public view returns (address id, address username, string memory password, bool isParent, uint8 familyId) { 
         require(users[_userAddress].id == _userAddress, "User Not Found");
         User storage user = users[_userAddress];
         return (user.id, user.username, user.password, user.isParent, user.familyId);

@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0",
     "body-parser": "^1.20.3",
     "canvas": "^2.11.2",
     "cookie-parser": "^1.4.7",

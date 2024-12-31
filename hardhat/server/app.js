@@ -15,7 +15,7 @@ const Payment = require('./utils/payment');
 const { users, transactions } = require('./dummyData');
 const deployContract = require('./deploy'); // Import the deployment script
 
-let USERS_CONTRACT, PROVIDER;
+let SMART_CONTRACT, PROVIDER;
 
 const app = express();
 const port = 3000;
@@ -42,8 +42,8 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 // Middleware to check if the user is authenticated
 async function isAuthenticated(req, res, next) {
-  console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
-  const userFound = await USERS_CONTRACT.getUser(req.user.id);
+  // console.log("entered isauthenticated>", req.isAuthenticated(), req.user);
+  const userFound = await SMART_CONTRACT.getUser(req.user.id);
   const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
   req.user = {
     id,
@@ -66,7 +66,7 @@ passport.use(new LocalStrategy(
     // const { account } = req.body;
     console.log("username>>", username);
     try{
-      const userFound = await USERS_CONTRACT.getUser(username);
+      const userFound = await SMART_CONTRACT.getUser(username);
       const [id, usernameSC, passwordSC, isParentSC, familyIdSC] = userFound;
   
       // const user = users.find(u => u.username === username);
@@ -99,7 +99,7 @@ passport.serializeUser((user, done) => {
 });
 
 passport.deserializeUser(async (curUser, done) => {
-  const userFound = await USERS_CONTRACT.getUser(curUser.id);
+  const userFound = await SMART_CONTRACT.getUser(curUser.id);
   const [id, username, isParent, familyId] = userFound;
   const user = {
     id,
@@ -175,17 +175,13 @@ app.post('/login', loginHandler);
 app.post('/register', async (req, res, next) => {
   console.log("req body>>", req.body);
   const { account, password } = req.body;
-  await USERS_CONTRACT.registerUser(account, password);
-
-  //delay for 5 sec
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await SMART_CONTRACT.registerUser(account, password);
 
   loginHandler(req, res, next);
 });
 
 
 app.get('/isValidSession', isAuthenticated, async(req, res) => {
-  
   res.status(200).send({ user: req.user });
 });
 
@@ -224,26 +220,11 @@ app.post('/makePayment', isAuthenticated, (req, res) => {
 app.post('/addMember', isAuthenticated, async(req, res) => {
   console.log("req body>>", req.body);
   const { isParent, userId } = req.body;
-  // const userFound = await USERS_CONTRACT.getUser(userId);
-  // console.log("user found in addMember>>", userFound);
-  // const [id, usernameSC, passwordSC, isParentSc, familyIdSC] = userFound;
-  
-  // const user = users.find(u => u.id === userId);
-
-  // if (!userFound && userFound[1]) { //Handled in SC
-  //   return res.status(404).json({ success: false, message: 'User not found.' });
-  // }
-  // user.familyId = req.user.familyId;
-  // user.isParent = isParent;
-  // console.log("users now>>", users);
-
-
-  // let provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
   
   await PROVIDER.send('hardhat_impersonateAccount', [req.user.id]);
   let parentSigner = await PROVIDER.getSigner(req.user.id);
   console.log("parentSigner>>", parentSigner);
-  let impersonatedContract = USERS_CONTRACT.connect(parentSigner);
+  let impersonatedContract = SMART_CONTRACT.connect(parentSigner);
   console.log("impoersonatedContract>>", await impersonatedContract.getAddress(), userId, isParent);
   let response = await impersonatedContract.addMember(userId, isParent);
   console.log("added member>>", response);
@@ -301,7 +282,7 @@ app.get("*", isAuthenticated, (req, res) => {
 
 // Deploy the Users contract on server start
 deployContract().then((contract) => {
-  [USERS_CONTRACT, PROVIDER] = contract;
+  [SMART_CONTRACT, PROVIDER] = contract;
 }).catch((error) => {
   console.error('Failed to deploy contract:', error);
 });
