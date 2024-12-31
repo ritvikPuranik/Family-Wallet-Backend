@@ -239,7 +239,9 @@ app.post('/approveOrRejectTransaction', isAuthenticated, async(req, res) => {
   if (req.user.isParent === false) {
     res.status(401).send("Unauthorized");
   }
-  const isSuccessful = await SMART_CONTRACT.approveOrRejectTxn(transactionId, isApproved);
+  const impersonatedContract = await impersonate(req.user.id);
+  const isSuccessful = await impersonatedContract.approveOrRejectTxn(transactionId, isApproved);
+  await PROVIDER.send('hardhat_stopImpersonatingAccount', [req.user.id]);
 
   isSuccessful ? res.status(201).send({ transactionId }) : res.status(500).send("Internal Server Error");
 });
